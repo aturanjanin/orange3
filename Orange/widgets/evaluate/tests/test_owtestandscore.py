@@ -25,6 +25,8 @@ from Orange.widgets.settings import (
     ClassValuesContextHandler, PerfectDomainContextHandler)
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
+from Orange.widgets.utils.state_summary import (format_summary_details,
+                                                format_multiple_summaries)
 from Orange.tests import test_filename
 
 
@@ -619,6 +621,31 @@ class TestOWTestAndScore(WidgetTest):
                 label = w.comparison_table.cellWidget(1, 0)
                 self.assertEqual(label.text(), "NA")
 
+    def test_summary(self):
+        """Check if the status bar updates when data is on input"""
+        iris = Table("iris")
+        train, test = iris[:120], iris[121:150]
+        info = self.widget.info
+        no_input = "No data on input"
+
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        self.send_signal(self.widget.Inputs.train_data, train)
+        summary, details = f"{len(train)}", format_summary_details(train)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.send_signal(self.widget.Inputs.test_data, test)
+        summary = f"{len(train)}, {len(test)}"
+        details = format_multiple_summaries([("Data", train), ("Test data", test)])
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.send_signal(self.widget.Inputs.train_data, None)
+        summary, details = f"{len(test)}", format_summary_details(test)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.send_signal(self.widget.Inputs.test_data, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
 
 class TestHelpers(unittest.TestCase):
     def test_results_one_vs_rest(self):
